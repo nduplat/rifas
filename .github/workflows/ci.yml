@@ -77,6 +77,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -89,9 +90,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Image digest
+      - name: Export image digest
         run: |
-          echo "image=${IMAGE}:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "digest=${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
 
   deploy-to-staging:
     name: Deploy to staging
@@ -99,6 +100,17 @@ jobs:
     needs: build-and-push
     if: github.event_name == 'push'
     steps:
+      - name: Prepare remote deploy directory and sync compose/nginx
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "backend/docker-compose.prod.yml,backend/nginx.conf,backend/.env.prod.example"
+          target: "${{ secrets.STAGING_REMOTE_DIR || '~/deploy/rifa1122' }}"
+          strip_components: 1
+          overwrite: true
+
       - name: Deploy to staging
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -106,10 +118,60 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            cd backend
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            docker pull ${{ env.IMAGE }}:latest
-            docker-compose up -d api
+            set -euo pipefail
+
+            REMOTE_DIR="${{ secrets.STAGING_REMOTE_DIR || '~/deploy/rifa1122' }}"
+            echo "Deploying image: ${{ env.IMAGE }}:latest to ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} ($REMOTE_DIR)"
+
+            # Use stricter ssh options and a short connect timeout
+            SSH_OPTS="-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=10"
+
+            ssh ${SSH_OPTS} ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} <<EOF
+              set -euo pipefail
+              cd "$REMOTE_DIR"
+
+              echo "Remote: docker version"
+              docker --version || true
+
+              # Optional GHCR login for private images
+              if [ -n "${{ secrets.GHCR_USERNAME }}" ] && [ -n "${{ secrets.GHCR_PAT }}" ]; then
+                echo "Logging into GHCR"
+                echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+              fi
+
+              echo "Ensure docker compose/plugin available"
+              if command -v docker >/dev/null && (docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null); then
+                echo "Using docker compose flow"
+
+                # Check if compose file exists
+                if [ -f docker-compose.prod.yml ]; then
+                  echo "Validating compose configuration"
+                  IMAGE="${{ env.IMAGE }}:latest" docker compose -f docker-compose.prod.yml config
+
+                  echo "Pulling via docker compose"
+                  IMAGE="${{ env.IMAGE }}:latest" docker compose -f docker-compose.prod.yml pull --ignore-pull-failures || true
+
+                  echo "Bringing services up (compose)"
+                  IMAGE="${{ env.IMAGE }}:latest" docker compose -f docker-compose.prod.yml up -d
+
+                  echo "Recording deployment info"
+                  DEPLOY_LOG="deploy.log"
+                  echo "$(date '+%Y-%m-%d %H:%M:%S') - Deployed ${{ env.IMAGE }}:latest by ${{ github.actor }}" >> "$DEPLOY_LOG"
+                  docker image inspect --format 'Digest: {{index .RepoDigests 0}}' "${{ env.IMAGE }}:latest" >> "$DEPLOY_LOG" 2>/dev/null || echo "Digest: unknown" >> "$DEPLOY_LOG"
+                  echo "---" >> "$DEPLOY_LOG"
+                else
+                  echo "No docker-compose.prod.yml found; cannot proceed"
+                  exit 1
+                fi
+              else
+                echo "docker compose not available; cannot proceed without compose"
+                exit 1
+              fi
+
+              echo "Finished deploy of ${{ env.IMAGE }}:latest"
+              echo "Services status:"
+              docker compose -f docker-compose.prod.yml ps
+            EOF
   optional-scan:
     name: Security scan (optional)
     runs-on: ubuntu-latest
