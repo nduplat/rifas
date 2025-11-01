@@ -1,0 +1,116 @@
+
+🔥 DYNAMES PROMPT MAESTRO — Proyecto "Rifa1122" (App de Rifas Inteligente)
+Contexto:
+Desarrolla una aplicación Flutter llamada "Rifa1122", una plataforma de rifas dinámicas y parametrizables conectadas a sorteos reales (tipo loterías nacionales). 
+El usuario puede:
+- Ver rifas disponibles o futuras.
+- Consultar sus detalles (premios, fechas, valor de boleta).
+- Comprar boletas con diferentes niveles o ligas (Hierro, Bronce, Plata, Oro, Platino, etc.).
+- Recibir recomendaciones personalizadas basadas en su historial (IA).
+
+Instrucciones generales:
+Este prompt orquesta la generación completa del proyecto Flutter por pasos. El resultado esperado es código modular, listo para ejecutar, con arquitectura Clean Architecture, Riverpod, Freezed, GoRouter y una API mock simulado.
+Frase mágica de ejecución: "Dynames Prompt Master: Ejecuta el Proyecto Rifa1122"
+
+Estructura de proyecto requerida (lib/):
+- core/
+  - errors/
+  - network/
+  - utils/
+  - theme/
+- features/
+  - auth/
+  - rifas/
+  - loterias/
+  - tickets/
+  - ai_recommender/
+- shared/
+  - widgets/
+  - animations/
+  - styles/
+- main.dart
+
+Dependencias recomendadas (pubspec.yaml):
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  flutter_riverpod: ^3.0.0
+  go_router: ^14.0.0
+  freezed_annotation: ^2.4.1
+  json_serializable: ^6.6.2
+  dio: ^5.4.0
+  intl: ^0.19.0
+  google_fonts: ^6.2.1
+  lottie: ^3.0.0
+  shimmer: ^3.0.0
+dev_dependencies:
+  build_runner: ^2.4.8
+  freezed: ^2.5.2
+
+Módulos y Prompts por paso:
+
+1) Prompt - Crear arquitectura del proyecto Flutter
+Objetivo: generar la base del proyecto, con carpetas, dependencias y main.dart inicial.
+Prompt:
+"Crea la arquitectura completa para una aplicación Flutter llamada 'Rifa1122' siguiendo Clean Architecture. Incluye los directorios core, features (auth, rifas, loterias, tickets, ai_recommender), shared (widgets, animations, styles) y un main.dart con inicialización de GoRouter y Riverpod. Agrega pubspec.yaml con las dependencias indicadas."
+
+2) Prompt - Generar modelos con Freezed
+Objetivo: crear modelos JSON serializables y tipados.
+Prompt:
+"Genera modelos usando Freezed + JsonSerializable para: User, Loteria, CategoriaRifa, Rifa, Ticket, Ganador. Cada modelo debe incluir campos según el ERD: ids (UUID), nombres, descripciones, fechas (DateTime) y métodos fromJson/toJson. Incluir ejemplos de JSON para cada entidad."
+
+3) Prompt - Implementar Mock API Service
+Objetivo: Simular endpoints REST para la app.
+Prompt:
+"Implementa un MockAPIService en Dart usando Dio que exponga: GET /rifas, GET /rifas/{id}, POST /tickets, GET /loterias. Simula latencia con Future.delayed y patrones de respuesta con status codes. Provee datos iniciales (JSON) para rifas y categorías basadas en las ligas: Hierro, Bronce, Plata, Oro, Platino, Esmeralda, Diamante, Maestro."
+
+4) Prompt - RifaListScreen (UI)
+Objetivo: pantalla principal que liste rifas.
+Prompt:
+"Crea RifaListScreen en Flutter. Debe consumir GET /rifas del MockAPIService. Mostrar rifas en Cards con: color de categoría, nombre, valor_boleta, fecha_fin y botón 'Ver detalles'. Usa Riverpod providers para estado y muestra Shimmer mientras carga."
+
+5) Prompt - RifaDetailScreen (UI)
+Objetivo: detalle de rifa y acción de compra.
+Prompt:
+"Crea RifaDetailScreen que muestre todos los detalles de la rifa: imagen/color, descripción, fondo_premios, premio_por_ganador, numero_ganadores, fecha_fin. Añade botón 'Comprar Boleta' que abra un modal para seleccionar cantidad y confirmar. Al confirmar, llamar POST /tickets."
+
+6) Prompt - TicketListScreen y TicketRepository
+Objetivo: mostrar tickets y lógica de compra.
+Prompt:
+"Implementa TicketRepository con: Future<Ticket> comprarBoleta(String rifaId, String userId) y Future<List<Ticket>> obtenerTickets(String userId). Implementa TicketListScreen que muestre tickets del usuario, estado y número. Simula la compra en el MockAPIService y devuelve números únicos (001..100)."
+
+7) Prompt - AIRecommenderService
+Objetivo: servicio que sugiera rifas basado en historial.
+Prompt:
+"Crea AIRecommenderService en Dart. Entrada: lista de Tickets o Rifas compradas. Lógica simple: contar frecuencia por categoria, calcular promedio de valor_boleta, filtrar rifas activas y devolver las top 5 más afines. Exponer metodo List<Rifa> recomendarRifas(List<Rifa> historial)."
+
+8) Prompt - Autenticación simple
+Objetivo: login/register mock.
+Prompt:
+"Crear AuthRepository mock que permita login/register simple con nombre y correo. Guardar usuario en SharedPreferences. Añadir LoginScreen con validación mínima."
+
+9) Prompt - Tema visual y estilos
+Objetivo: UI consistente con ligas.
+Prompt:
+"Define ThemeData con Material3 y GoogleFonts (Poppins o Inter). Mapear colores por categoria: Hierro:#6D6D6D, Bronce:#A97142, Plata:#C0C0C0, Oro:#FFD700, Platino:#AFEEEE, Esmeralda:#50C878, Diamante:#1E90FF, Maestro:#9370DB. Incluir text styles y componentes Card estilizados."
+
+10) Prompt - Router y Rutas
+Objetivo: rutas y navegación.
+Prompt:
+"Configura GoRouter con rutas: / (RifaListScreen), /rifa/:id (RifaDetailScreen), /tickets (TicketListScreen), /login (LoginScreen). Mantener estado de navegación con Riverpod."
+
+11) Prompt - README y JSON de ejemplo
+Objetivo: documentación y datos iniciales.
+Prompt:
+"Genera README.md con instrucciones para: flutter pub get, build_runner para freezed, ejecutar la app. Incluye un archivo initial_data.json con 8 rifas (una por categoria) y ejemplos de payloads para POST /tickets."
+
+Salida esperada final del Maestro:
+- Código completo organizado por archivos (lib/...). 
+- README.md y initial_data.json.
+- Scripts o indicaciones para ejecutar y generar código (build_runner).
+
+Extras opcionales (añadir si se solicita):
+- Integración con Supabase o FastAPI (endpoints y migración).
+- Pagos reales (Stripe) o wallets internas.
+- Web UI (Flutter web) y adaptaciones responsive.

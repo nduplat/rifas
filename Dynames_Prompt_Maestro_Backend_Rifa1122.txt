@@ -1,0 +1,328 @@
+
+🔥 DYNAMES PROMPT MAESTRO — BACKEND "Rifa1122" (API, Servicios y Orquestación)
+Idioma: Español
+Objetivo general:
+Construir el backend completo para la aplicación Rifa1122. API RESTful (y websockets opcional) para gestionar rifas paramétricas, tickets, usuarios, integración con loterías externas, sistema de pagos, y operaciones administrativas. Debe ser modular, seguro, escalable y listo para producción (Docker, CI/CD, tests, observabilidad).
+
+Stack recomendado (principal):
+- Lenguaje: Python 3.11+
+- Framework API: FastAPI
+- ORM: SQLAlchemy (1.4+) + pydantic models
+- Migraciones: Alembic
+- Base de datos: PostgreSQL (PG12+)
+- Cache / broker: Redis
+- Tareas asíncronas: Celery (o Dramatiq) con Redis
+- Autenticación: JWT (pyjwt) + OAuth2 password flow
+- Pagos: Stripe (webhooks)
+- Contenerización: Docker + docker-compose
+- CI: GitHub Actions (test, lint, build, docker)
+- Observabilidad: Sentry + Prometheus metrics (Prometheus client)
+- Logging: structlog / logging con JSON output
+- Docs: OpenAPI (FastAPI lo expone) + Redoc
+
+Frase mágica de ejecución:
+"Dynames Backend Master: Construye el backend de Rifa1122"
+
+--- CONTEXTO FUNCIONAL (qué debe soportar)
+- Gestión de usuarios (registro, login, roles: jugador, admin, operador).
+- CRUD de categorías de rifa (liga/color/valores financieros).
+- CRUD de rifas: parametrizables (fecha inicio/fin, número_ganadores, lotería vinculada, reglas de premio, rake, total_boletas).
+- Tickets: compra, asignación de números, estado (vendido, disponible, ganador, anulado).
+- Integración con loterías externas: validación de resultados (API o scraping según disponibilidad).
+- Gestión de ganadores y pagos (payouts, comisiones, auditoría).
+- Sistema de pagos inicial (Stripe) y registro de transacciones.
+- Dashboard administrativo (endpoints y documentación para UI admin).
+- Notificaciones en tiempo real (WebSocket) para actualizaciones de rifas y resultados.
+- Jobs periódicos: reconciliación de resultados, generación de reportes, cierre de rifas (Celery).
+- Seguridad: rate limiting, validación de inputs, protección contra reentrancy en compras, idempotencia en POST /tickets.
+- Testing: unitarios, integración, y e2e básica (pytest, pytest-asyncio).
+
+--- ESTRUCTURA DE REPOSITORIO SUGERIDA
+```
+backend/
+├── app/
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── auth.py
+│   │   │   │   ├── users.py
+│   │   │   │   ├── rifas.py
+│   │   │   │   ├── tickets.py
+│   │   │   │   └── loterias.py
+│   │   │   └── deps.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── security.py
+│   │   └── celery_app.py
+│   ├── models/        # SQLAlchemy models
+│   ├── schemas/       # Pydantic schemas
+│   ├── services/      # lógica de negocio (compras, payouts, recomendaciones IA)
+│   ├── repositories/  # abstracción DB
+│   ├── workers/       # tareas asíncronas (Celery tasks)
+│   ├── integrations/  # conectores a APIs externas (loterias, stripe)
+│   ├── tests/
+│   └── main.py
+├── alembic/
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml / requirements.txt
+└── README.md
+```
+
+--- MODELOS (SQLAlchemy) — Esquema principal (detallado)
+Provee los modelos principales con campos, tipos y relaciones. Usa UUIDs (postgres uuid-ossp or gen_random_uuid).
+
+1) User
+```python
+class User(Base):
+    __tablename__ = "users"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    nombre = Column(String(120), nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    telefono = Column(String(32), nullable=True)
+    hashed_password = Column(String(255), nullable=True)
+    rol = Column(Enum("jugador","admin","operador", name="user_roles"), default="jugador")
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    is_active = Column(Boolean, default=True)
+```
+
+2) Loteria
+```python
+class Loteria(Base):
+    __tablename__ = "loterias"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    nombre = Column(String, nullable=False)
+    descripcion = Column(Text)
+    frecuencia = Column(String)  # diaria, semanal...
+    url_resultados = Column(String)
+    meta = Column(JSONB, default={})
+```
+
+3) CategoriaRifa
+```python
+class CategoriaRifa(Base):
+    __tablename__ = "categoria_rifa"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    nombre = Column(String, nullable=False, unique=True)
+    color = Column(String(32))
+    valor_boleta = Column(Integer, nullable=False)
+    total_recaudo = Column(Integer)
+    rake = Column(Numeric(5,4))  # 0.25
+    fondo_premios = Column(Integer)
+    premio_por_ganador = Column(Integer)
+    comentario = Column(String(255))
+```
+
+4) Rifa
+```python
+class Rifa(Base):
+    __tablename__ = "rifas"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    nombre = Column(String(255), nullable=False)
+    categoria_id = Column(UUID(as_uuid=True), ForeignKey("categoria_rifa.id"))
+    loteria_id = Column(UUID(as_uuid=True), ForeignKey("loterias.id"))
+    fecha_inicio = Column(DateTime(timezone=True))
+    fecha_fin = Column(DateTime(timezone=True), index=True)
+    numero_ganadores = Column(Integer, default=1)
+    estado = Column(Enum("pendiente","activa","cerrada","cancelada", name="rifa_states"), default="pendiente")
+    reglas = Column(JSONB, default={})  # reglas paramétricas: ganar_dos_primeros, reparto, ...
+    total_boletas = Column(Integer, default=100)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+```
+
+5) Ticket
+```python
+class Ticket(Base):
+    __tablename__ = "tickets"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    rifa_id = Column(UUID(as_uuid=True), ForeignKey("rifas.id"), nullable=False)
+    usuario_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    numero = Column(Integer, nullable=False)
+    comprado_en = Column(DateTime(timezone=True))
+    estado = Column(Enum("disponible","vendido","ganador","anulado", name="ticket_states"), default="disponible")
+    precio = Column(Integer)
+    transaccion_id = Column(UUID(as_uuid=True), nullable=True)
+```
+
+6) Ganador / Resultado
+```python
+class Ganador(Base):
+    __tablename__ = "ganadores"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    ticket_id = Column(UUID(as_uuid=True), ForeignKey("tickets.id"), nullable=False)
+    monto_ganado = Column(Integer, nullable=False)
+    fecha_pago = Column(DateTime(timezone=True), nullable=True)
+    referencia_pago = Column(String(255))
+```
+
+7) Transaccion (pagos)
+```python
+class Transaccion(Base):
+    __tablename__ = "transacciones"
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    amount = Column(Integer, nullable=False)
+    currency = Column(String(8), default="COP")
+    provider = Column(String(50))  # stripe, sandbox...
+    provider_ref = Column(String(255))
+    status = Column(Enum("pending","succeeded","failed","refunded", name="trans_status"), default="pending")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+```
+
+--- ENDPOINTS REST (v1) — resumen y contratos (Pydantic schemas)
+Proveer contratos claros (request/response), código de status y ejemplos JSON.
+
+Auth
+- POST /api/v1/auth/register -> {nombre, email} -> 201 (user created)
+- POST /api/v1/auth/login -> {email, password} -> 200 {access_token, token_type}
+
+Users (admin)
+- GET /api/v1/users -> paginado
+- GET /api/v1/users/{id}
+- PATCH /api/v1/users/{id}
+- DELETE /api/v1/users/{id}
+
+Categorias y Loterias
+- GET /api/v1/categorias
+- POST /api/v1/categorias
+- GET /api/v1/loterias
+- POST /api/v1/loterias
+
+Rifas
+- GET /api/v1/rifas -> filtros: estado, categoria, fecha_inicio/fin, page, per_page
+- POST /api/v1/rifas -> crear rifa parametrizada
+- GET /api/v1/rifas/{id}
+- PATCH /api/v1/rifas/{id}
+- POST /api/v1/rifas/{id}/cerrar -> dispara job de cierre y reconciliación
+- POST /api/v1/rifas/{id}/recalcular -> recalcular premios (admin)
+
+Tickets
+- GET /api/v1/rifas/{id}/tickets -> listar tickets (admin o dueño)
+- POST /api/v1/rifas/{id}/tickets -> comprar boleta (idempotente; acepta quantity)
+  - Body: {user_id, quantity, payment_method, idempotency_key}
+  - Response: 201 {tickets: [{id, numero, estado}], transaccion_id}
+- GET /api/v1/users/{id}/tickets -> tickets del usuario
+
+Pagos / Webhooks
+- POST /api/v1/webhooks/stripe -> manejador de eventos (payment_intent.succeeded, charge.failed)
+- POST /api/v1/webhooks/loteria -> (opcional) webhook de loteria externa
+
+Resultados / Ganadores
+- GET /api/v1/rifas/{id}/resultados -> muestra ganadores y status de pago
+
+Admin / Reports
+- GET /api/v1/admin/reportes/ingresos?desde=&hasta=
+- GET /api/v1/admin/reportes/participacion?rifa_id=
+
+--- COMPORTAMIENTOS CRÍTICOS Y REGLAS DE NEGOCIO (detalladas)
+1) Compra idempotente: usar idempotency_key para evitar doble cobro. Bloquear números hasta confirmar pago.
+2) Asignación de números: asignar números secuenciales o aleatorios determinísticos según regla de la rifa.
+3) Reconciliación: al cerrar rifa, fetch resultados de la loteria vinculada, mapear ganadores y generar registros Ganador.
+4) Cálculo de premios: según reglas en rifa.reglas (e.g., si ganan dos primeros se reparte X%, si solo uno, otro cálculo).
+5) Audit logs: registrar acciones críticas (creación rifa, cierre, payout) en tabla o servicio de logs.
+6) Seguridad transaccional: use DB transactions for purchase flow, with SELECT FOR UPDATE on available tickets where needed.
+
+--- TAREAS ASÍNCRONAS Y SCHEDULER
+- Celery tasks:
+  - `tasks.close_rifa(rifa_id)` -> fetch resultados, marcar ganadores, emitir notificaciones.
+  - `tasks.process_payouts(ganador_id)` -> ejecutar pago (stripe transfer or admin manual)
+  - `tasks.reconcile_loteria()` -> periodic fetch de APIs de loteria
+- Beat schedule: cierre automático diario/por horario
+
+--- INTEGRACIONES EXTERNAS (especificar adaptadores)
+- Loterías: adaptadores en `app/integrations/loterias/` con clases por lotería que implementen interface `get_result(date) -> {numbers, meta}`.
+- Pagos: `app/integrations/payments/stripe.py` para crear payment_intents y manejar webhooks.
+- Notificaciones: `app/integrations/notifications/` para email (SendGrid), SMS, y WebSocket push.
+
+--- IDIOMAS, LOCALES Y MONEDA
+- Localización: support for es-CO
+- Moneda: COP default, use cents integer format in DB (no floats)
+
+--- SEGURIDAD Y HARDENING (checklist)
+- Rate limiting (FastAPI middleware, e.g., slowapi)
+- CORS configurado solo para dominios autorizados
+- Protección contra SQL injection (ORM + parameterized queries)
+- Protección contra CSRF (para web admin)
+- Revisión de dependencias (safety, pip-audit)
+- Secret management: use environment variables / vault
+- TLS enforced in production
+
+--- CI / CD (GitHub Actions example)
+- Workflow: tests + lint (ruff / black / isort), build docker, push image to registry, deploy to staging/prod.
+- Run migrations with alembic in deploy step.
+- Safety checks and secret scanning.
+
+--- DOCKER / DOCKER-COMPOSE (sugerencias)
+- docker-compose.yml with services: api, postgres, redis, worker, flower (celery), pgadmin (optional)
+- Dockerfile multi-stage: build, install dependencies, run uvicorn.
+- Use entrypoint script to run migrations and start workers.
+
+--- TESTING (pytest)
+- Unit tests for services and repositories (mock DB with pytest-postgresql or sqlite)
+- Integration tests for endpoints (httpx AsyncClient)
+- Test purchase flow including idempotency and concurrent buys (use pytest-asyncio)
+
+--- OBSERVABILITY
+- Expose /metrics (Prometheus) using prometheus_client.
+- Integrate Sentry for exceptions.
+- Log structured JSON and ship to ELK/Datadog in prod.
+
+--- DOCUMENTACIÓN Y SALIDAS (entregables del Prompt)
+El Maestro debe devolver:
+1. Código base de FastAPI con estructura de carpetas y archivos listos para ejecutar.
+2. Archivos SQL de migraciones iniciales (alembic env + versions).
+3. Ejemplos de requests/responses (OpenAPI examples).
+4. docker-compose.yml y Dockerfile.
+5. Scripts para ejecutar localmente: `scripts/init_local.sh` (crea DB, corre migrations, carga initial data).
+6. README.md con pasos: build, run, pruebas, variables de entorno necesarias (.env.example).
+7. initial_data.sql / initial_data.json con categorías y rifas ejemplo (8 rifas).
+8. GitHub Actions workflow example `.github/workflows/ci.yml`.
+9. Tests básicos (pytest) y ejemplo de cobertura.
+10. Notas de seguridad y checklist pre-despliegue.
+
+--- EJEMPLOS DE JSON (payloads)
+POST /api/v1/auth/register
+```json
+{ "nombre": "Juan Perez", "email": "juan@ejemplo.com", "password": "Secret123!" }
+```
+
+POST /api/v1/rifas/{id}/tickets (compra)
+```json
+{
+  "user_id": "uuid-user-1234",
+  "quantity": 2,
+  "payment_method": "stripe",
+  "idempotency_key": "op-2025-10-30-abc123"
+}
+```
+
+Respuesta 201
+```json
+{
+  "tickets": [
+    { "id": "uuid-ticket-1", "numero": 12, "estado":"vendido" },
+    { "id": "uuid-ticket-2", "numero": 13, "estado":"vendido" }
+  ],
+  "transaccion_id": "uuid-trans-1"
+}
+```
+
+--- PREGUNTAS QUE EL BACKEND DEBE RESPONDER AL USAR ESTE PROMPT
+- ¿Qué estrategia de asignación de números quieres: secuencial (1..N) o aleatoria?
+- ¿Los tickets se venden por rifa completa (único lote) o por múltiples lotes/ediciones?
+- ¿Deseas integración con pagos reales (Stripe) o solo simulación inicialmente?
+> Nota: No hacer preguntas al usuario en este paso si se usa el prompt con una IA — diseñar por defecto: secuencial, 100 boletas por rifa, inicio con simulación de pagos (stripe sandbox) y opción a activar stripe real.
+
+--- INSTRUCCIONES FINALES PARA EJECUCIÓN POR IA (pasos que el modelo debe seguir)
+1. Generar estructura de carpetas y archivos.
+2. Generar modelos SQLAlchemy + alembic migrations.
+3. Implementar endpoints y pydantic schemas con validación.
+4. Implementar lógica de compra en `services/purchase_service.py` con transacciones DB y manejo idempotente.
+5. Crear Mock integration para Loterias que permita simular resultados por fecha.
+6. Añadir Celery tasks y ejemplo de worker con Redis.
+7. Añadir docker-compose, Dockerfile y scripts de bootstrap.
+8. Añadir tests de ejemplo y workflow CI.
+9. Generar README y initial data.
+10. Empaquetar todo en un repo listo para `git clone` y `make dev`.
+
+--- FIN DEL PROMPT MAESTRO BACKEND

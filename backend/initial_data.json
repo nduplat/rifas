@@ -1,0 +1,273 @@
+{
+  "loterias": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "nombre": "Baloto",
+      "descripcion": "Lotería nacional colombiana con sorteos diarios",
+      "frecuencia": "diaria",
+      "url_resultados": "https://www.baloto.com/resultados"
+    }
+  ],
+  "categorias": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "nombre": "Bronce",
+      "color": "Marrón",
+      "valor_boleta": 5000,
+      "total_recaudo": 500000,
+      "rake": 0.25,
+      "fondo_premios": 375000,
+      "premio_por_ganador": 187500,
+      "comentario": "Premium"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440005",
+      "nombre": "Plata",
+      "color": "Gris",
+      "valor_boleta": 10000,
+      "total_recaudo": 1000000,
+      "rake": 0.20,
+      "fondo_premios": 800000,
+      "premio_por_ganador": 400000,
+      "comentario": "Intermedio"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440007",
+      "nombre": "Oro",
+      "color": "Dorado",
+      "valor_boleta": 20000,
+      "total_recaudo": 2000000,
+      "rake": 0.15,
+      "fondo_premios": 1700000,
+      "premio_por_ganador": 566666,
+      "comentario": "Alto"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440009",
+      "nombre": "Diamante",
+      "color": "Azul",
+      "valor_boleta": 50000,
+      "total_recaudo": 5000000,
+      "rake": 0.10,
+      "fondo_premios": 4500000,
+      "premio_por_ganador": 2250000,
+      "comentario": "Premium Plus"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "nombre": "Opalo",
+      "color": "Verde",
+      "valor_boleta": 75000,
+      "total_recaudo": 7500000,
+      "rake": 0.08,
+      "fondo_premios": 6900000,
+      "premio_por_ganador": 3450000,
+      "comentario": "Elite"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440013",
+      "nombre": "Rubi",
+      "color": "Rojo",
+      "valor_boleta": 100000,
+      "total_recaudo": 10000000,
+      "rake": 0.05,
+      "fondo_premios": 9500000,
+      "premio_por_ganador": 4750000,
+      "comentario": "VIP"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440015",
+      "nombre": "Platino",
+      "color": "Plateado",
+      "valor_boleta": 150000,
+      "total_recaudo": 15000000,
+      "rake": 0.03,
+      "fondo_premios": 14550000,
+      "premio_por_ganador": 7275000,
+      "comentario": "Exclusivo"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440017",
+      "nombre": "Industrial Moderno",
+      "color": "Negro",
+      "valor_boleta": 200000,
+      "total_recaudo": 20000000,
+      "rake": 0.02,
+      "fondo_premios": 19600000,
+      "premio_por_ganador": 9800000,
+      "comentario": "Corporativo"
+    }
+  ],
+  "rifas": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "nombre": "Rifa Especial Navidad",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440002",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2023-12-01T00:00:00.000Z",
+      "fecha_fin": "2023-12-24T23:59:59.000Z",
+      "numero_ganadores": 2,
+      "estado": "activa",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440004",
+      "nombre": "Rifa de Verano",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440005",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-06-01T00:00:00.000Z",
+      "fecha_fin": "2024-06-30T23:59:59.000Z",
+      "numero_ganadores": 1,
+      "estado": "activa",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440006",
+      "nombre": "Rifa Aniversario",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440007",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-01-01T00:00:00.000Z",
+      "fecha_fin": "2024-01-31T23:59:59.000Z",
+      "numero_ganadores": 3,
+      "estado": "cerrada",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440008",
+      "nombre": "Rifa de Otoño",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440009",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-09-01T00:00:00.000Z",
+      "fecha_fin": "2024-09-30T23:59:59.000Z",
+      "numero_ganadores": 1,
+      "estado": "activa",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "nombre": "Rifa Primavera",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440011",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-03-01T00:00:00.000Z",
+      "fecha_fin": "2024-03-31T23:59:59.000Z",
+      "numero_ganadores": 2,
+      "estado": "activa",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "nombre": "Rifa Especial",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440013",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-07-01T00:00:00.000Z",
+      "fecha_fin": "2024-07-31T23:59:59.000Z",
+      "numero_ganadores": 1,
+      "estado": "cerrada",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440014",
+      "nombre": "Rifa de Invierno",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440015",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-12-01T00:00:00.000Z",
+      "fecha_fin": "2024-12-31T23:59:59.000Z",
+      "numero_ganadores": 2,
+      "estado": "activa",
+      "total_boletas": 100
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440016",
+      "nombre": "Rifa Mega",
+      "categoria_id": "550e8400-e29b-41d4-a716-446655440017",
+      "loteria_id": "550e8400-e29b-41d4-a716-446655440001",
+      "fecha_inicio": "2024-05-01T00:00:00.000Z",
+      "fecha_fin": "2024-05-31T23:59:59.000Z",
+      "numero_ganadores": 5,
+      "estado": "activa",
+      "total_boletas": 100
+    }
+  ],
+  "users": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "nombre": "Admin User",
+      "email": "admin@rifa1122.com",
+      "telefono": "+57 300 123 4567",
+      "rol": "admin",
+      "hashed_password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj8GwqHNpZW"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440018",
+      "nombre": "Juan Pérez",
+      "email": "juan.perez@email.com",
+      "telefono": "+57 301 234 5678",
+      "rol": "jugador",
+      "hashed_password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj8GwqHNpZW"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440019",
+      "nombre": "María García",
+      "email": "maria.garcia@email.com",
+      "telefono": "+57 302 345 6789",
+      "rol": "jugador",
+      "hashed_password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj8GwqHNpZW"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440020",
+      "rifa_id": "550e8400-e29b-41d4-a716-446655440003",
+      "usuario_id": "550e8400-e29b-41d4-a716-446655440018",
+      "numero": 42,
+      "comprado_en": "2023-12-01T14:30:00.000Z",
+      "estado": "vendido"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440021",
+      "rifa_id": "550e8400-e29b-41d4-a716-446655440004",
+      "usuario_id": "550e8400-e29b-41d4-a716-446655440019",
+      "numero": 15,
+      "comprado_en": "2024-06-15T10:00:00.000Z",
+      "estado": "vendido"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440022",
+      "rifa_id": "550e8400-e29b-41d4-a716-446655440006",
+      "usuario_id": "550e8400-e29b-41d4-a716-446655440018",
+      "numero": 7,
+      "comprado_en": "2024-01-10T16:45:00.000Z",
+      "estado": "ganador"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440023",
+      "rifa_id": "550e8400-e29b-41d4-a716-446655440006",
+      "usuario_id": "550e8400-e29b-41d4-a716-446655440019",
+      "numero": 23,
+      "comprado_en": "2024-01-15T11:20:00.000Z",
+      "estado": "vendido"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440024",
+      "rifa_id": "550e8400-e29b-41d4-a716-446655440012",
+      "usuario_id": "550e8400-e29b-41d4-a716-446655440018",
+      "numero": 88,
+      "comprado_en": "2024-07-10T09:15:00.000Z",
+      "estado": "ganador"
+    }
+  ],
+  "ganadores": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440025",
+      "ticket_id": "550e8400-e29b-41d4-a716-446655440022",
+      "monto_ganado": 566666,
+      "fecha_pago": "2024-02-01T10:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440026",
+      "ticket_id": "550e8400-e29b-41d4-a716-446655440024",
+      "monto_ganado": 4750000,
+      "fecha_pago": "2024-08-01T14:30:00.000Z"
+    }
+  ]
+}

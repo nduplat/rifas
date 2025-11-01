@@ -1,0 +1,193 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rifa1122_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rifa1122
+      POSTGRES_USER: rifa_user
+      POSTGRES_PASSWORD: rifa_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./alembic/versions:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh
+    ports:
+      - "5432:5432"
+    networks:
+      - rifa_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rifa_user -d rifa1122"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backup service
+  backup:
+    image: postgres:15-alpine
+    container_name: rifa1122_backup
+    restart: "no"
+    profiles: ["manual"]
+    environment:
+      POSTGRES_DB: rifa1122
+      POSTGRES_USER: rifa_user
+      POSTGRES_PASSWORD: rifa_password
+      POSTGRES_HOST: postgres
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh
+    command: >
+      sh -c "
+        chmod +x /usr/local/bin/backup.sh &&
+        /usr/local/bin/backup.sh
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rifa_network
+
+  # Auto-backup scheduler
+  scheduler:
+    image: alpine:latest
+    container_name: rifa1122_scheduler
+    restart: unless-stopped
+    command: sh -c "while true; do sleep 86400; done"
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rifa_network
+
+  # Redis Cache/Broker
+  redis:
+    image: redis:7-alpine
+    container_name: rifa1122_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - rifa_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rifa1122_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql://rifa_user:rifa_password@postgres:5432/rifa1122
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - DEBUG=false
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rifa_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rifa1122_worker
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - DATABASE_URL=postgresql://rifa_user:rifa_password@postgres:5432/rifa1122
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - rifa_network
+
+  # Flower (Celery Monitoring)
+  flower:
+    image: mher/flower:2.0
+    container_name: rifa1122_flower
+    restart: unless-stopped
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_BASIC_AUTH=admin:admin123
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - worker
+    networks:
+      - rifa_network
+
+  # pgAdmin (Database Admin - Optional)
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: rifa1122_pgadmin
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@rifa1122.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - rifa_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  rifa_network:
+    driver: bridge
